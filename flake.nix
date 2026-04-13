@@ -7,6 +7,11 @@
         path = ./services-flake;
         description = "Services-flake based template";
       };
+
+      golang = {
+        path = ./golang;
+        description = "services-flake with golang app";
+      };
     };
 
     defaultTemplate = self.templates.services-flake;
