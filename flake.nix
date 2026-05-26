@@ -12,6 +12,11 @@
         path = ./golang;
         description = "services-flake with golang app";
       };
+
+      terraform = {
+        path = ./terraform;
+        description = "nixpkgs-terraform based Terraform flake";
+      };
     };
 
     defaultTemplate = self.templates.services-flake;
