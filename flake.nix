@@ -13,6 +13,11 @@
         description = "services-flake with golang app";
       };
 
+      python = {
+        path = ./python;
+        description = "services-flake with python app";
+      };
+
       terraform = {
         path = ./terraform;
         description = "nixpkgs-terraform based Terraform flake";
