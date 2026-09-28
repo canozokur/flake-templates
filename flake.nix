@@ -13,6 +13,11 @@
         description = "services-flake with golang app";
       };
 
+      golang-private = {
+        path = ./golang-private;
+        description = "services-flake with golang app using private Go modules";
+      };
+
       python = {
         path = ./python;
         description = "services-flake with python app";
