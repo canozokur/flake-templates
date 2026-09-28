@@ -56,6 +56,9 @@
             # modules are fetched per-module with GOPROXY as an impure env var, so a custom
             # proxy has to be set in the nix-daemon's environment rather than here.
 
+            # must match the binary name, which go derives from the module path in go.mod
+            meta.mainProgram = "goApplication";
+
             # disable running `go test` on each build
             doCheck = false;
           };
