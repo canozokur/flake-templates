@@ -7,6 +7,14 @@
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
     flake-root.url = "github:srid/flake-root";
+    gomod2nix = {
+      url = "github:nix-community/gomod2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    git-hooks-nix = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -15,6 +23,7 @@
       imports = [
         inputs.process-compose-flake.flakeModule
         inputs.flake-root.flakeModule
+        inputs.git-hooks-nix.flakeModule
       ];
 
       systems = [
@@ -35,53 +44,54 @@
           ...
         }:
         let
-          goApplicationPackage = pkgs.buildGoModule rec {
+          goApplicationPackage = pkgs.buildGoApplication {
             pname = "goApplication";
             version = "local";
+            pwd = ./.;
             src = ./.;
+            modules = ./gomod2nix.toml;
 
-            env = {
-              CGO_ENABLED = 0;
-            };
+            CGO_ENABLED = 0;
 
-            # unfortunately setting GOPROXY in `env` does not propagate to the module
-            # derivation builder, we need to override the module attrs and add a preBuild phase
-            # and set GOPROXY there. Not the best, not the worst either.
-            overrideModAttrs = (
-              prev: {
-                preBuild = ''
-                  echo "running preBuild"
-                  GOPROXY="https://example.com"
-                '';
-              }
-            );
+            # modules are fetched per-module with GOPROXY as an impure env var, so a custom
+            # proxy has to be set in the nix-daemon's environment rather than here.
 
             # disable running `go test` on each build
             doCheck = false;
-
-            # this needs to be updated when go.mod changes
-            vendorHash = lib.fakeHash;
           };
         in
         {
           _module.args.pkgs = import nixpkgs {
             inherit system;
             config.allowUnfree = true;
+            overlays = [ inputs.gomod2nix.overlays.default ];
           };
 
           # we can export the package here
           packages.default = goApplicationPackage;
 
+          # the hook needs network access for new modules, which the sandboxed check lacks
+          pre-commit.check.enable = false;
+          pre-commit.settings.hooks.gomod2nix = {
+            enable = true;
+            name = "gomod2nix";
+            entry = lib.getExe' pkgs.gomod2nix "gomod2nix";
+            files = "(^|/)go\\.(mod|sum)$";
+            pass_filenames = false;
+          };
+
           devShells = {
             default = pkgs.mkShell {
               inputsFrom = [
                 config.flake-root.devShell
+                config.pre-commit.devShell
               ];
 
               nativeBuildInputs = with pkgs; [
                 go
                 git
                 just
+                gomod2nix
               ];
 
               buildInputs = with pkgs; [
